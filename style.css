@@ -116,6 +116,10 @@ body {
   backdrop-filter: blur(3px);
 }
 
+.overlay[hidden] {
+  display: none !important;
+}
+
 .panel {
   width: min(340px, 100%);
   text-align: center;
