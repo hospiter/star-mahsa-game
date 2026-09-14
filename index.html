@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+  <title>ستاره‌ی مهسا 💫</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <canvas id="gameCanvas"></canvas>
+
+  <div class="hud" id="hud" hidden>
+    <span id="scoreValue">0</span>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="overlay" id="startScreen">
+    <div class="panel">
+      <div class="tiny-label">یه بازی کوچولو</div>
+      <h1>ستاره‌ی مهسا 💫</h1>
+      <p>بزن بریم ببینیم این ستاره چقدر می‌تونه تو آسمون دووم بیاره...<br>
+      یه لمس یا کلیک، یه پرواز کوچولو به بالا.</p>
+      <button class="primary" id="startBtn">شروع بازی ✨</button>
+      <p class="hint-text">لمس کن / کلیک کن / اسپیس بزن</p>
+    </div>
+  </div>
+
+  <div class="overlay" id="gameOverScreen" hidden>
+    <div class="panel">
+      <div class="tiny-label">تموم شد!</div>
+      <h1>باز هم نورانی بودی 💛</h1>
+      <div class="score-rows">
+        <div class="score-row">
+          <span>امتیاز</span>
+          <span id="finalScore">0</span>
+        </div>
+        <div class="score-row">
+          <span>بهترین رکورد</span>
+          <span id="bestScore">0</span>
+        </div>
+      </div>
+      <button class="primary" id="retryBtn">دوباره پرواز کن 🚀</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
