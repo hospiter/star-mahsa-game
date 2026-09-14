@@ -1,0 +1,219 @@
+/* =========================================================
+   ستاره‌ی مهسا — design tokens
+   Continues the night-sky series: the glowing star from the countdown
+   universe is now the thing you fly through the sky yourself.
+   Palette:  --void/--night (sky) · --gold-core/--gold-glow (the star)
+             --obstacle (drifting meteor pillars) · --silver (UI ink)
+========================================================= */
+
+:root {
+  --void: #04040c;
+  --night-deep: #070a1f;
+  --night-mid: #10173f;
+  --night-edge: #1c1440;
+
+  --gold-core: #fff6df;
+  --gold-glow: #ffd98a;
+
+  --obstacle: #2a2560;
+  --obstacle-edge: #443a8f;
+
+  --star-dim: rgba(220, 226, 255, 0.5);
+  --silver: #eef0ff;
+  --silver-soft: rgba(238, 240, 255, 0.75);
+  --rose: #ff6f91;
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--void);
+}
+
+body {
+  font-family: "Vazirmatn", sans-serif;
+  color: var(--silver);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#gameCanvas {
+  position: fixed;
+  inset: 0;
+  display: block;
+  touch-action: none;
+  background:
+    radial-gradient(ellipse at 30% 15%, var(--night-edge), transparent 60%),
+    radial-gradient(ellipse at 75% 85%, var(--night-mid), transparent 55%),
+    var(--night-deep);
+}
+
+/* ---------- HUD ---------- */
+
+.hud {
+  position: fixed;
+  top: max(20px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  pointer-events: none;
+}
+
+#scoreValue {
+  font-size: clamp(2rem, 9vw, 2.6rem);
+  font-weight: 800;
+  color: var(--gold-core);
+  text-shadow: 0 0 16px rgba(255, 217, 138, 0.6);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- milestone toast ---------- */
+
+.toast {
+  position: fixed;
+  top: clamp(80px, 18vh, 120px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-8px);
+  z-index: 6;
+  max-width: min(86vw, 320px);
+  text-align: center;
+  font-size: clamp(0.9rem, 3.6vw, 1rem);
+  font-weight: 700;
+  color: var(--gold-core);
+  background: rgba(16, 23, 63, 0.7);
+  border: 1px solid rgba(255, 217, 138, 0.35);
+  backdrop-filter: blur(6px);
+  padding: 10px 20px;
+  border-radius: 999px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s var(--ease), transform 0.4s var(--ease);
+}
+
+.toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ---------- overlays ---------- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(4, 4, 12, 0.55);
+  backdrop-filter: blur(3px);
+}
+
+.panel {
+  width: min(340px, 100%);
+  text-align: center;
+  padding: 34px 26px 30px;
+  border-radius: 26px;
+  background: linear-gradient(180deg, rgba(28, 20, 64, 0.94), rgba(7, 10, 31, 0.97));
+  border: 1px solid rgba(238, 240, 255, 0.14);
+  box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.6), 0 0 40px -10px rgba(255, 217, 138, 0.15);
+}
+
+.tiny-label {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--gold-core);
+  background: rgba(255, 217, 138, 0.14);
+  border: 1px solid rgba(255, 217, 138, 0.3);
+  padding: 5px 14px;
+  border-radius: 999px;
+  margin-bottom: 14px;
+}
+
+.panel h1 {
+  margin: 0 0 12px;
+  font-size: clamp(1.35rem, 5.6vw, 1.7rem);
+  font-weight: 800;
+  color: var(--silver);
+}
+
+.panel p {
+  margin: 0 0 22px;
+  font-size: clamp(0.9rem, 3.6vw, 0.98rem);
+  line-height: 1.9;
+  color: var(--silver-soft);
+}
+
+.hint-text {
+  margin: 14px 0 0;
+  font-size: 0.8rem;
+  color: var(--silver-soft);
+  opacity: 0.75;
+}
+
+.score-rows {
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.score-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: rgba(238, 240, 255, 0.06);
+  border: 1px solid rgba(238, 240, 255, 0.1);
+  font-weight: 600;
+}
+
+.score-row span:last-child {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--gold-core);
+  font-variant-numeric: tabular-nums;
+}
+
+button {
+  font-family: inherit;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.primary {
+  width: 100%;
+  padding: 15px 22px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--gold-glow), var(--gold-core));
+  color: var(--night-deep);
+  font-size: clamp(0.95rem, 3.6vw, 1.05rem);
+  font-weight: 800;
+  box-shadow: 0 12px 24px -10px rgba(255, 217, 138, 0.55);
+  transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+
+.primary:hover {
+  transform: translateY(-2px);
+}
+
+.primary:active {
+  transform: translateY(0) scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+  }
+}
