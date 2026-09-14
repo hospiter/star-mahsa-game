@@ -59,43 +59,85 @@
 
   // ---------- game constants ----------
 
-  const GRAVITY = 1500;       // px/s^2
-  const FLAP_VELOCITY = -420; // px/s
+  const GRAVITY = 1150;       // px/s^2 — gentle enough to feel forgiving on a phone
+  const FLAP_VELOCITY = -360; // px/s
+  const MAX_FALL_SPEED = 620; // px/s — terminal velocity, so it never plunges too fast
+  const START_LIFT = FLAP_VELOCITY * 0.55; // a small automatic lift the instant you start
+  const GRACE_MS = 700; // brief invincible window right after start/retry
+
   const BIRD_RADIUS = 15;
   const BIRD_X_FRACTION = 0.28;
   const PILLAR_WIDTH = 64;
-  const PILLAR_SPACING = 280; // px between pillar spawn points
-  const BASE_SPEED = 190;     // px/s
-  const MAX_SPEED_BONUS = 130;
 
-  const MILESTONES = [
-    { score: 5, text: "دیدی؟ داری می‌درخشی ✨" },
-    { score: 10, text: "همینجوری برو، ستاره‌ی من 💫" },
-    { score: 15, text: "هیچی نمی‌تونه جلوتو بگیره 🌙" },
-    { score: 20, text: "تو از هر ستاره‌ای پرنورتری 🩶" },
-    { score: 30, text: "عالی داری پیش میری، مهسا جان 🌸" },
-    { score: 50, text: "افسانه‌ای شدی! 🏆" },
+  const BASE_SPACING = 300;   // px between pillar spawns at score 0
+  const MIN_SPACING = 195;    // pillars never get closer than this — stays fair
+  const BASE_SPEED = 175;     // px/s
+  const MAX_SPEED_BONUS = 110;
+  const BASE_GAP = 250;
+  const MIN_GAP = 195;
+
+  // Shown one at a time as she scores — a steady stream of compliments,
+  // shuffled so the same line doesn't repeat back-to-back.
+  const COMPLIMENTS = [
+    "تو نازترین دختری 💗",
+    "باهوش‌ترین آدمی که می‌شناسم 🧠✨",
+    "خوشگل‌ترینی 🌸",
+    "زیباترینی 💫",
+    "تو قشنگ‌ترین خلقتی 🩷",
+    "مهربون‌ترین قلب دنیا مال توئه 💛",
+    "همه‌چیزت بی‌نظیره 🤍",
+    "چشمات از هزارتا ستاره قشنگ‌تره ✨",
+    "خنده‌ت دنیامو روشن می‌کنه 🌟",
+    "لبخندت از هر چیزی گرم‌تره 🔥💗",
+    "تو بهترین اتفاق زندگیمی 🎀",
+    "دلم برات یه دنیا تنگ می‌شه 🥹💗",
+    "هیچکس مثل تو نیست 🌷",
+    "تو دقیقاً همونی که همیشه آرزوش رو داشتم 💫",
+    "قلبم فقط برای تو می‌تپه 💓",
+    "تو معجزه‌ی زندگیمی 🌙",
+    "با تو همه‌چی قشنگ‌تره 🎈",
+    "عزیزترین آدم دنیامی 💕",
+    "تو کامل‌ترینی 🤍",
+    "صدات آرومم می‌کنه 🎶💗",
+    "هر روز بیشتر عاشقتم 💘",
+    "تو رویای منی که واقعی شده 🌌",
+    "قربونت برم مهسا جان 🫶",
+    "تو نورترین چیز زندگیمی ✨🩶",
   ];
+
+  let complimentQueue = [];
+
+  function nextCompliment() {
+    if (complimentQueue.length === 0) {
+      complimentQueue = [...COMPLIMENTS];
+      for (let i = complimentQueue.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [complimentQueue[i], complimentQueue[j]] = [complimentQueue[j], complimentQueue[i]];
+      }
+    }
+    return complimentQueue.pop();
+  }
 
   // ---------- state ----------
 
   let state = "start"; // 'start' | 'playing' | 'gameover'
-  let bird, pillars, score, trail, distanceSinceSpawn, shownMilestones;
+  let bird, pillars, hearts, score, trail, distanceSinceSpawn;
   let lastTime = 0;
+  let gameStartTime = 0;
   let toastTimer = null;
 
   function resetGame() {
     bird = {
       x: width * BIRD_X_FRACTION,
       y: height / 2,
-      vy: 0,
+      vy: START_LIFT,
       rotation: 0,
     };
     pillars = [];
+    hearts = [];
     trail = [];
     score = 0;
     distanceSinceSpawn = 0;
-    shownMilestones = new Set();
     scoreValueEl.textContent = "0";
   }
 
@@ -103,9 +145,13 @@
     return BASE_SPEED + Math.min(score * 3, MAX_SPEED_BONUS);
   }
 
+  function currentSpacing() {
+    return Math.max(MIN_SPACING, BASE_SPACING - score * 4);
+  }
+
   function spawnPillar() {
-    const margin = 70;
-    const gapHeight = Math.max(190, 250 - Math.min(score * 2, 60));
+    const margin = 74;
+    const gapHeight = Math.max(MIN_GAP, BASE_GAP - score * 2);
     const gapY = margin + Math.random() * (height - margin * 2 - gapHeight);
     pillars.push({ x: width + PILLAR_WIDTH, gapY, gapHeight, passed: false });
   }
@@ -119,16 +165,67 @@
     toastEl.textContent = text;
     toastEl.classList.add("visible");
     if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toastEl.classList.remove("visible"), 2200);
+    toastTimer = setTimeout(() => toastEl.classList.remove("visible"), 1700);
   }
 
-  function checkMilestones() {
-    MILESTONES.forEach((m) => {
-      if (score === m.score && !shownMilestones.has(m.score)) {
-        shownMilestones.add(m.score);
-        showToast(m.text);
-      }
+  // ---------- heart-burst particles ----------
+
+  const HEART_COLORS = ["#ffd98a", "#ff9fc0", "#ff6f91", "#ffffff", "#f6c9e0"];
+
+  function spawnHeartBurst(x, y) {
+    const count = 8 + Math.floor(Math.random() * 5);
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 60 + Math.random() * 90;
+      hearts.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 40,
+        size: 8 + Math.random() * 8,
+        life: 0,
+        maxLife: 0.9 + Math.random() * 0.5,
+        color: HEART_COLORS[Math.floor(Math.random() * HEART_COLORS.length)],
+      });
+    }
+  }
+
+  function updateHearts(dt) {
+    for (let i = hearts.length - 1; i >= 0; i--) {
+      const h = hearts[i];
+      h.life += dt;
+      h.x += h.vx * dt;
+      h.y += h.vy * dt;
+      h.vy += 90 * dt;
+      if (h.life >= h.maxLife) hearts.splice(i, 1);
+    }
+  }
+
+  function drawHeartShape(c, cx, cy, size) {
+    c.beginPath();
+    const top = size * 0.3;
+    c.moveTo(cx, cy + top);
+    c.bezierCurveTo(cx, cy, cx - size / 2, cy, cx - size / 2, cy + top);
+    c.bezierCurveTo(cx - size / 2, cy + (size + top) / 2, cx, cy + (size + top) / 2, cx, cy + size);
+    c.bezierCurveTo(cx, cy + (size + top) / 2, cx + size / 2, cy + (size + top) / 2, cx + size / 2, cy + top);
+    c.bezierCurveTo(cx + size / 2, cy, cx, cy, cx, cy + top);
+    c.closePath();
+  }
+
+  function drawHearts() {
+    hearts.forEach((h) => {
+      const t = h.life / h.maxLife;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, 1 - t);
+      ctx.fillStyle = h.color;
+      drawHeartShape(ctx, h.x, h.y, h.size * (1 - t * 0.3));
+      ctx.fill();
+      ctx.restore();
     });
+  }
+
+  function celebratePoint() {
+    spawnHeartBurst(bird.x, bird.y);
+    showToast(nextCompliment());
   }
 
   function circleRectOverlap(cx, cy, r, rx, ry, rw, rh) {
@@ -155,6 +252,7 @@
   function startGame() {
     resetGame();
     state = "playing";
+    gameStartTime = performance.now();
     startScreen.hidden = true;
     gameOverScreen.hidden = true;
     hud.hidden = false;
@@ -164,17 +262,28 @@
 
   // ---------- update & draw ----------
 
-  function update(dt) {
+  function update(dt, now) {
+    const inGrace = now - gameStartTime < GRACE_MS;
+
     bird.vy += GRAVITY * dt;
+    if (bird.vy > MAX_FALL_SPEED) bird.vy = MAX_FALL_SPEED;
     bird.y += bird.vy * dt;
     bird.rotation = Math.max(-0.5, Math.min(1.1, bird.vy / 600));
+
+    // during the grace window, keep the star safely on screen instead of
+    // letting an unlucky resize or a slow first tap end the run instantly
+    if (inGrace) {
+      bird.y = Math.max(BIRD_RADIUS + 4, Math.min(height - BIRD_RADIUS - 4, bird.y));
+    }
 
     trail.push({ x: bird.x, y: bird.y });
     if (trail.length > 10) trail.shift();
 
+    updateHearts(dt);
+
     const speed = currentSpeed();
     distanceSinceSpawn += speed * dt;
-    if (distanceSinceSpawn >= PILLAR_SPACING) {
+    if (distanceSinceSpawn >= currentSpacing()) {
       distanceSinceSpawn = 0;
       spawnPillar();
     }
@@ -187,7 +296,7 @@
         p.passed = true;
         score += 1;
         scoreValueEl.textContent = String(score);
-        checkMilestones();
+        celebratePoint();
       }
 
       if (p.x + PILLAR_WIDTH < -10) {
@@ -195,19 +304,31 @@
         continue;
       }
 
-      const hitTop = circleRectOverlap(bird.x, bird.y, BIRD_RADIUS, p.x, 0, PILLAR_WIDTH, p.gapY);
-      const hitBottom = circleRectOverlap(
-        bird.x, bird.y, BIRD_RADIUS,
-        p.x, p.gapY + p.gapHeight, PILLAR_WIDTH, height - (p.gapY + p.gapHeight)
-      );
-      if (hitTop || hitBottom) {
-        endGame();
-        return;
+      if (!inGrace) {
+        const hitTop = circleRectOverlap(bird.x, bird.y, BIRD_RADIUS, p.x, 0, PILLAR_WIDTH, p.gapY);
+        const hitBottom = circleRectOverlap(
+          bird.x, bird.y, BIRD_RADIUS,
+          p.x, p.gapY + p.gapHeight, PILLAR_WIDTH, height - (p.gapY + p.gapHeight)
+        );
+        if (hitTop || hitBottom) {
+          endGame();
+          return;
+        }
       }
     }
 
-    if (bird.y - BIRD_RADIUS < 0 || bird.y + BIRD_RADIUS > height) {
-      endGame();
+    // only the ground ends the run — bumping the top just stops you there,
+    // which feels much fairer on a small screen
+    if (bird.y + BIRD_RADIUS > height) {
+      if (!inGrace) {
+        endGame();
+        return;
+      }
+      bird.y = height - BIRD_RADIUS - 4;
+    }
+    if (bird.y - BIRD_RADIUS < 0) {
+      bird.y = BIRD_RADIUS;
+      bird.vy = Math.max(bird.vy, 0);
     }
   }
 
@@ -281,6 +402,7 @@
     ctx.clearRect(0, 0, width, height);
     drawBackgroundStars();
     drawPillars();
+    drawHearts();
     drawBird();
   }
 
@@ -289,7 +411,7 @@
     const dt = Math.min((now - lastTime) / 1000, 0.033);
     lastTime = now;
 
-    update(dt);
+    update(dt, now);
     if (state !== "playing") {
       draw();
       return;
@@ -300,7 +422,16 @@
 
   // ---------- input ----------
 
+  let lastInputTime = 0;
+
   function handlePrimaryInput() {
+    // pointerdown and touchstart both fire for a single physical tap on most
+    // touchscreens — without this guard every tap would double-fire (two
+    // flaps, or two overlapping game loops started at once).
+    const now = performance.now();
+    if (now - lastInputTime < 80) return;
+    lastInputTime = now;
+
     if (state === "start") {
       startGame();
     } else if (state === "playing") {
@@ -310,10 +441,23 @@
     }
   }
 
+  // pointerdown covers mouse + touch on virtually every modern browser, but
+  // some in-app webviews (Telegram/Instagram browsers etc.) are inconsistent,
+  // so touchstart is wired up too as a safety net. Calling the handler twice
+  // for one tap is harmless — flap() and startGame() are both idempotent.
   canvas.addEventListener("pointerdown", (e) => {
     e.preventDefault();
     handlePrimaryInput();
   });
+
+  canvas.addEventListener(
+    "touchstart",
+    (e) => {
+      e.preventDefault();
+      handlePrimaryInput();
+    },
+    { passive: false }
+  );
 
   startBtn.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -332,13 +476,28 @@
     }
   });
 
+  // Mobile browsers often correct window.innerHeight a moment after the page
+  // loads (address bar collapsing, etc.). If that resize lands mid-game, we
+  // clamp the star back into view instead of letting a shrinking viewport
+  // count as an instant, unfair death.
   window.addEventListener("resize", () => {
     resize();
-    if (state !== "playing") draw();
+    if (state === "playing" && bird) {
+      bird.y = Math.min(Math.max(bird.y, BIRD_RADIUS + 2), height - BIRD_RADIUS - 2);
+    } else {
+      draw();
+    }
+  });
+
+  window.addEventListener("orientationchange", () => {
+    setTimeout(resize, 250);
   });
 
   // ---------- init ----------
 
   resize();
+  // some mobile browsers report a slightly-off innerHeight on first paint —
+  // correct it a beat later so the very first game isn't sized wrong
+  setTimeout(resize, 300);
   draw();
 })();
